@@ -23,6 +23,10 @@ You can deploy this API to a production server using a platform like Vercel, Net
 
 Feel free to fork the repository and submit pull requests with your improvements or bug fixes. We welcome contributions from the community!
 
+## Know Issues
+
+- None
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
