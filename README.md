@@ -10,8 +10,7 @@ This will allows you quickly make any docs using templates and export them as PD
 
 ## Technology Stack
 
-- Next.js
-- Supabase
+- React
 - Typescript
 - Tailwind CSS
 
