@@ -16,7 +16,7 @@ This will allows you quickly make any docs using templates and export them as PD
 
 ## Deployment
 
-You can deploy this API to a production server using a platform like Vercel, Netlify or any of your choice.
+You can deploy this application to a production server using a platform like Vercel, Netlify or any of your choice.
 
 ## Contributing
 
