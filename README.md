@@ -2,6 +2,14 @@
 
 This will allows you quickly make any docs using templates and export them as PDF
 
+## Features
+
+- Load and parse existing PDF invoices
+- Generate new PDF invoices
+- Export invoices in multiple formats
+- Track invoice numbers and totals
+- Dashboard with analytics
+
 ## Prerequisites
 
 - VS Code or any Code editor
