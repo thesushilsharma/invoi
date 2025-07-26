@@ -1,6 +1,6 @@
 # invoi
 
-This will allows you quickly make any docs using templates and export them as PDF
+💼 Streamline your invoicing workflow. Upload existing invoices, generate new ones, track payments, and export data - all in one powerful web app.
 
 ## Features
 
