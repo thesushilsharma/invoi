@@ -18,9 +18,11 @@
 
 ## Technology Stack
 
-- React
+- Svelte Kit
 - Typescript
 - Tailwind CSS
+- PostgreSQL
+- Drizzle ORM
 
 ## Deployment
 
@@ -30,7 +32,7 @@ You can deploy this application to a production server using a platform like Ver
 
 Feel free to fork the repository and submit pull requests with your improvements or bug fixes. We welcome contributions from the community!
 
-## Know Issues
+## Known Issues
 
 - None
 
