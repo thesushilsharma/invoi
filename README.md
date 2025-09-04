@@ -14,7 +14,6 @@
 
 - VS Code or any Code editor
 - Node.js installed on your machine
-- npm package manager
 
 ## Technology Stack
 
