@@ -21,7 +21,10 @@
 
 	const recentInvoices = $derived(
 		invoices
-			.sort((a:Invoice, b:Invoice) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+			.sort(
+				(a: Invoice, b: Invoice) =>
+					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+			)
 			.slice(0, 5)
 	);
 
@@ -34,7 +37,7 @@
 				const paymentDate = new Date(payment.paymentDate);
 				return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
 			})
-			.reduce((sum:number, payment:Payment) => sum + payment.amount, 0);
+			.reduce((sum: number, payment: Payment) => sum + payment.amount, 0);
 	});
 
 	function getStatusColor(status: string) {
@@ -110,18 +113,20 @@
 		<CardHeader>
 			<CardTitle class="flex items-center justify-between">
 				Recent Invoices
-				<Button variant="outline" size="sm">View All</Button>
+				<Button variant="outline" size="sm" href="/invoices">View All</Button>
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="space-y-4">
 				{#each recentInvoices as invoice}
-					<div class="flex items-center justify-between rounded-lg border p-4">
-						<div class="flex items-center space-x-4">
+					<div
+						class="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+					>
+						<div class="flex flex-1 items-center space-x-4">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
 								<FileText class="h-5 w-5 text-blue-600" />
 							</div>
-							<div>
+							<div class="flex-1">
 								<p class="font-medium">{invoice.invoiceNumber}</p>
 								<p class="text-sm text-muted-foreground">{invoice.clientName}</p>
 							</div>
@@ -137,6 +142,7 @@
 							<Badge class={getStatusColor(invoice.status)}>
 								{invoice.status}
 							</Badge>
+							<Button variant="outline" size="sm" href="/invoices/{invoice.id}">View</Button>
 						</div>
 					</div>
 				{/each}
@@ -144,8 +150,12 @@
 				{#if recentInvoices.length === 0}
 					<div class="py-8 text-center text-muted-foreground">
 						<FileText class="mx-auto mb-4 h-12 w-12 opacity-50" />
-						<p>No invoices yet</p>
-						<p class="text-sm">Create your first invoice to get started</p>
+						<p class="mb-2">No invoices yet</p>
+						<p class="mb-4 text-sm">Create your first invoice to get started</p>
+						<Button href="/invoices/new">
+							<FileText class="mr-2 h-4 w-4" />
+							Create First Invoice
+						</Button>
 					</div>
 				{/if}
 			</div>
@@ -159,17 +169,28 @@
 		</CardHeader>
 		<CardContent>
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-				<Button class="flex h-20 flex-col items-center justify-center space-y-2">
+				<Button
+					href="/invoices/new"
+					class="flex h-20 flex-col items-center justify-center space-y-2"
+				>
 					<FileText class="h-6 w-6" />
 					<span>New Invoice</span>
 				</Button>
 
-				<Button variant="outline" class="flex h-20 flex-col items-center justify-center space-y-2">
+				<Button
+					variant="outline"
+					href="/clients"
+					class="flex h-20 flex-col items-center justify-center space-y-2"
+				>
 					<Users class="h-6 w-6" />
 					<span>Manage Clients</span>
 				</Button>
 
-				<Button variant="outline" class="flex h-20 flex-col items-center justify-center space-y-2">
+				<Button
+					variant="outline"
+					href="/reports"
+					class="flex h-20 flex-col items-center justify-center space-y-2"
+				>
 					<TrendingUp class="h-6 w-6" />
 					<span>View Reports</span>
 				</Button>

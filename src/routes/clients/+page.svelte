@@ -13,6 +13,17 @@
 	let showCreateForm = $state(false);
 	let searchQuery = $state(data.search);
 
+	// Check for prefill parameter to auto-open create form
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			const urlParams = new URLSearchParams(window.location.search);
+			const prefill = urlParams.get('prefill');
+			if (prefill) {
+				showCreateForm = true;
+			}
+		}
+	});
+
 	function handleSearch() {
 		const params = new URLSearchParams($page.url.searchParams);
 		if (searchQuery) {
