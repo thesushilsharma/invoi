@@ -81,6 +81,23 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
 })
 
+export const clients = pgTable("clients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country"),
+  taxId: text("tax_id"),
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   invoiceId: uuid("invoice_id")
@@ -101,6 +118,8 @@ export type NewInvoiceItem = typeof invoiceItems.$inferInsert
 export type Payment = typeof payments.$inferSelect
 export type NewPayment = typeof payments.$inferInsert
 export type Notification = typeof notifications.$inferSelect
+export type Client = typeof clients.$inferSelect
+export type NewClient = typeof clients.$inferInsert
 
 
 
