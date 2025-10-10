@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ url }) => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const data = await request.json();
-		
+
 		const newClient = await db.insert(clients).values({
 			name: data.name,
 			email: data.email,

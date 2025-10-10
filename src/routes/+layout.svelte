@@ -14,6 +14,7 @@
     { title: 'Invoices', url: '/invoices', icon: FileText },
     { title: 'Payments', url: '/payments', icon: DollarSign },
     { title: 'Clients', url: '/clients', icon: Users },
+    { title: 'Analytics', url: '/analytics', icon: BarChart3 },
     { title: 'Reports', url: '/reports', icon: BarChart3 },
     { title: 'Notifications', url: '/notifications', icon: Bell },
     { title: 'Settings', url: '/settings', icon: Settings },

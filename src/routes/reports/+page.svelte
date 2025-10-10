@@ -46,9 +46,15 @@
 						<p class="text-sm text-muted-foreground">Seasonal trends & forecasts</p>
 					</div>
 				</div>
-				<Button class="mt-6" href="/">
-					Back to Dashboard
-				</Button>
+				<div class="flex space-x-4 mt-6">
+					<Button href="/analytics">
+						<BarChart3 class="mr-2 h-4 w-4" />
+						View Analytics
+					</Button>
+					<Button variant="outline" href="/">
+						Back to Dashboard
+					</Button>
+				</div>
 			</div>
 		</CardContent>
 	</Card>
