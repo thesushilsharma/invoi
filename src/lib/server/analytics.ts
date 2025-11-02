@@ -129,37 +129,42 @@ export class AnalyticsService {
 			.where(eq(invoices.status, 'paid'));
 
 		// Monthly revenue (current month)
+		const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+		const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 		const monthlyRevenueResult = await db
 			.select({ total: sum(invoices.total) })
 			.from(invoices)
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					gte(invoices.createdAt, new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString()),
-					lte(invoices.createdAt, new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString())
+					sql`${invoices.createdAt} >= ${monthStart}`,
+					sql`${invoices.createdAt} <= ${monthEnd}`
 				)
 			);
 
 		// Last month revenue for growth calculation
+		const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+		const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
 		const lastMonthRevenueResult = await db
 			.select({ total: sum(invoices.total) })
 			.from(invoices)
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					gte(invoices.createdAt, new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1).toISOString()),
-					lte(invoices.createdAt, new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).toISOString())
+					sql`${invoices.createdAt} >= ${lastMonthStart}`,
+					sql`${invoices.createdAt} <= ${lastMonthEnd}`
 				)
 			);
 
 		// Yearly revenue
+		const yearStart = new Date(currentYear.getFullYear(), 0, 1);
 		const yearlyRevenueResult = await db
 			.select({ total: sum(invoices.total) })
 			.from(invoices)
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					gte(invoices.createdAt, new Date(currentYear.getFullYear(), 0, 1).toISOString())
+					sql`${invoices.createdAt} >= ${yearStart}`
 				)
 			);
 
@@ -181,8 +186,8 @@ export class AnalyticsService {
 		const totalRevenue = Number(totalRevenueResult[0]?.total || 0);
 		const monthlyRevenue = Number(monthlyRevenueResult[0]?.total || 0);
 		const lastMonthRevenue = Number(lastMonthRevenueResult[0]?.total || 0);
-		const revenueGrowth = lastMonthRevenue > 0 
-			? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+		const revenueGrowth = lastMonthRevenue > 0
+			? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
 			: 0;
 
 		return {
@@ -207,8 +212,8 @@ export class AnalyticsService {
 			.from(invoices)
 			.where(
 				and(
-					gte(invoices.createdAt, startDate.toISOString()),
-					lte(invoices.createdAt, endDate.toISOString())
+					sql`${invoices.createdAt} >= ${startDate}`,
+					sql`${invoices.createdAt} <= ${endDate}`
 				)
 			)
 			.groupBy(invoices.status);
@@ -247,22 +252,24 @@ export class AnalyticsService {
 
 		// New clients this month
 		const currentMonth = new Date();
+		const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
 		const newClientsResult = await db
 			.select({ count: count(clients.id) })
 			.from(clients)
 			.where(
-				gte(clients.createdAt, new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1))
+				gte(clients.createdAt, monthStart)
 			);
 
 		// Last month clients for growth
 		const lastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+		const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
 		const lastMonthClientsResult = await db
 			.select({ count: count(clients.id) })
 			.from(clients)
 			.where(
 				and(
 					gte(clients.createdAt, lastMonth),
-					lte(clients.createdAt, new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0))
+					lte(clients.createdAt, lastMonthEnd)
 				)
 			);
 
@@ -271,8 +278,8 @@ export class AnalyticsService {
 
 		const newClientsThisMonth = newClientsResult[0]?.count || 0;
 		const lastMonthNewClients = lastMonthClientsResult[0]?.count || 0;
-		const clientGrowth = lastMonthNewClients > 0 
-			? ((newClientsThisMonth - lastMonthNewClients) / lastMonthNewClients) * 100 
+		const clientGrowth = lastMonthNewClients > 0
+			? ((newClientsThisMonth - lastMonthNewClients) / lastMonthNewClients) * 100
 			: 0;
 
 		return {
@@ -291,8 +298,8 @@ export class AnalyticsService {
 			.from(payments)
 			.where(
 				and(
-					gte(payments.createdAt, startDate.toISOString()),
-					lte(payments.createdAt, endDate.toISOString())
+					sql`${payments.createdAt} >= ${startDate}`,
+					sql`${payments.createdAt} <= ${endDate}`
 				)
 			);
 
@@ -306,8 +313,8 @@ export class AnalyticsService {
 			.from(payments)
 			.where(
 				and(
-					gte(payments.createdAt, startDate.toISOString()),
-					lte(payments.createdAt, endDate.toISOString())
+					sql`${payments.createdAt} >= ${startDate}`,
+					sql`${payments.createdAt} <= ${endDate}`
 				)
 			)
 			.groupBy(payments.paymentMethod);
@@ -347,19 +354,19 @@ export class AnalyticsService {
 	private static async getMonthlyRevenueData(): Promise<MonthlyData[]> {
 		const months = [];
 		const currentDate = new Date();
-		
+
 		for (let i = 11; i >= 0; i--) {
 			const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
 			const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-			
+
 			const result = await db
 				.select({ total: sum(invoices.total) })
 				.from(invoices)
 				.where(
 					and(
 						eq(invoices.status, 'paid'),
-						gte(invoices.createdAt, date.toISOString()),
-						lte(invoices.createdAt, nextMonth.toISOString())
+						sql`${invoices.createdAt} >= ${date}`,
+						sql`${invoices.createdAt} <= ${nextMonth}`
 					)
 				);
 
@@ -394,8 +401,8 @@ export class AnalyticsService {
 			email: client.email,
 			totalRevenue: Number(client.totalRevenue || 0),
 			invoiceCount: client.invoiceCount,
-			averageInvoiceValue: client.invoiceCount > 0 
-				? Number(client.totalRevenue || 0) / client.invoiceCount 
+			averageInvoiceValue: client.invoiceCount > 0
+				? Number(client.totalRevenue || 0) / client.invoiceCount
 				: 0
 		}));
 	}
@@ -403,18 +410,18 @@ export class AnalyticsService {
 	private static async getMonthlyPaymentsData(): Promise<MonthlyData[]> {
 		const months = [];
 		const currentDate = new Date();
-		
+
 		for (let i = 11; i >= 0; i--) {
 			const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
 			const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-			
+
 			const result = await db
 				.select({ total: sum(payments.amount) })
 				.from(payments)
 				.where(
 					and(
-						gte(payments.createdAt, date.toISOString()),
-						lte(payments.createdAt, nextMonth.toISOString())
+						sql`${payments.createdAt} >= ${date}`,
+						sql`${payments.createdAt} <= ${nextMonth}`
 					)
 				);
 
@@ -430,11 +437,11 @@ export class AnalyticsService {
 	private static async getMonthlyInvoiceStatusData(): Promise<MonthlyStatusData[]> {
 		const months = [];
 		const currentDate = new Date();
-		
+
 		for (let i = 11; i >= 0; i--) {
 			const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
 			const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-			
+
 			const result = await db
 				.select({
 					status: invoices.status,
@@ -443,8 +450,8 @@ export class AnalyticsService {
 				.from(invoices)
 				.where(
 					and(
-						gte(invoices.createdAt, date.toISOString()),
-						lte(invoices.createdAt, nextMonth.toISOString())
+						sql`${invoices.createdAt} >= ${date}`,
+						sql`${invoices.createdAt} <= ${nextMonth}`
 					)
 				)
 				.groupBy(invoices.status);
@@ -466,11 +473,11 @@ export class AnalyticsService {
 	private static async getMonthlyClientData(): Promise<MonthlyData[]> {
 		const months = [];
 		const currentDate = new Date();
-		
+
 		for (let i = 11; i >= 0; i--) {
 			const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
 			const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-			
+
 			const result = await db
 				.select({ count: count(clients.id) })
 				.from(clients)
