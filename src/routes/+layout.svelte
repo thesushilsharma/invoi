@@ -1,8 +1,10 @@
 <script lang="ts">
   import '../app.css';
-  import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarInset } from '$lib/components/ui/sidebar';
+  import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarTrigger, SidebarInset } from '$lib/components/ui/sidebar';
   import { Button } from '$lib/components/ui/button';
-  import { Home, FileText, DollarSign, Settings, Users, BarChart3, Bell } from '@lucide/svelte';
+  import { Toaster } from '$lib/components/ui/toast';
+  import { Home, FileText, DollarSign, Settings, Users, ChartBar, Bell, UserCog } from '@lucide/svelte';
+  
   interface Props {
     children?: import('svelte').Snippet;
   }
@@ -14,8 +16,9 @@
     { title: 'Invoices', url: '/invoices', icon: FileText },
     { title: 'Payments', url: '/payments', icon: DollarSign },
     { title: 'Clients', url: '/clients', icon: Users },
-    { title: 'Analytics', url: '/analytics', icon: BarChart3 },
-    { title: 'Reports', url: '/reports', icon: BarChart3 },
+    { title: 'Staff', url: '/staff', icon: UserCog },
+    { title: 'Analytics', url: '/analytics', icon: ChartBar },
+    { title: 'Reports', url: '/reports', icon: ChartBar },
     { title: 'Notifications', url: '/notifications', icon: Bell },
     { title: 'Settings', url: '/settings', icon: Settings },
   ];
@@ -34,12 +37,10 @@
       <SidebarMenu>
         {#each menuItems as item}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href={item.url} class="flex items-center gap-3">
-                <item.icon class="w-4 h-4" />
-                <span>{item.title}</span>
-              </a>
-            </SidebarMenuButton>
+            <a href={item.url} class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors">
+              <item.icon class="w-4 h-4" />
+              <span>{item.title}</span>
+            </a>
           </SidebarMenuItem>
         {/each}
       </SidebarMenu>
@@ -69,3 +70,5 @@
     </main>
   </SidebarInset>
 </SidebarProvider>
+
+<Toaster />

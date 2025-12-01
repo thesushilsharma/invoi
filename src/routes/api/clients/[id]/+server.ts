@@ -6,65 +6,42 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
-		const client = await db.select().from(clients).where(eq(clients.id, params.id));
-		
-		if (!client.length) {
+		const [client] = await db.select().from(clients).where(eq(clients.id, params.id));
+
+		if (!client) {
 			return json({ error: 'Client not found' }, { status: 404 });
 		}
 
-		return json(client[0]);
+		return json(client);
 	} catch (error) {
-		console.error('Error fetching client:', error);
+		console.error('Failed to fetch client:', error);
 		return json({ error: 'Failed to fetch client' }, { status: 500 });
-	}
-};
-
-export const PUT: RequestHandler = async ({ params, request }) => {
-	try {
-		const data = await request.json();
-		
-		const updatedClient = await db.update(clients)
-			.set({
-				name: data.name,
-				email: data.email,
-				phone: data.phone,
-				address: data.address,
-				city: data.city,
-				state: data.state,
-				zipCode: data.zipCode,
-				country: data.country,
-				taxId: data.taxId,
-				notes: data.notes,
-				isActive: data.isActive,
-				updatedAt: new Date()
-			})
-			.where(eq(clients.id, params.id))
-			.returning();
-
-		if (!updatedClient.length) {
-			return json({ error: 'Client not found' }, { status: 404 });
-		}
-
-		return json(updatedClient[0]);
-	} catch (error) {
-		console.error('Error updating client:', error);
-		return json({ error: 'Failed to update client' }, { status: 500 });
 	}
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	try {
-		const deletedClient = await db.delete(clients)
+		await db.delete(clients).where(eq(clients.id, params.id));
+		return json({ success: true });
+	} catch (error) {
+		console.error('Failed to delete client:', error);
+		return json({ error: 'Failed to delete client' }, { status: 500 });
+	}
+};
+
+export const PATCH: RequestHandler = async ({ params, request }) => {
+	try {
+		const data = await request.json();
+
+		const [updatedClient] = await db
+			.update(clients)
+			.set({ ...data, updatedAt: new Date() })
 			.where(eq(clients.id, params.id))
 			.returning();
 
-		if (!deletedClient.length) {
-			return json({ error: 'Client not found' }, { status: 404 });
-		}
-
-		return json({ message: 'Client deleted successfully' });
+		return json(updatedClient);
 	} catch (error) {
-		console.error('Error deleting client:', error);
-		return json({ error: 'Failed to delete client' }, { status: 500 });
+		console.error('Failed to update client:', error);
+		return json({ error: 'Failed to update client' }, { status: 500 });
 	}
 };

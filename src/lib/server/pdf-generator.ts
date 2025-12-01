@@ -47,6 +47,9 @@ export class PDFGenerator {
 		const template = options.template || this.getDefaultTemplate();
 		const companyInfo = options.companyInfo || this.getDefaultCompanyInfo();
 		
+		// Attach items to invoice for internal use
+		const invoiceWithItems = { ...invoice, items };
+		
 		// Set colors from template
 		const primaryColor = template.primaryColor || '#3b82f6';
 		const secondaryColor = template.secondaryColor || '#64748b';
@@ -55,29 +58,30 @@ export class PDFGenerator {
 		this.doc = new jsPDF();
 
 		// Add header
-		await this.addHeader(invoice, companyInfo, template, options);
+		await this.addHeader(invoiceWithItems, companyInfo, template, options);
 
 		// Add invoice details
-		this.addInvoiceDetails(invoice);
+		this.addInvoiceDetails(invoiceWithItems);
 
 		// Add client information
-		this.addClientInfo(invoice);
+		this.addClientInfo(invoiceWithItems);
 
 		// Add items table
-		this.addItemsTable(items, invoice.currency);
+		this.addItemsTable(items, invoiceWithItems.currency);
 
 		// Add totals
-		this.addTotals(invoice);
+		this.addTotals(invoiceWithItems);
 
 		// Add footer
-		this.addFooter(invoice, template);
+		this.addFooter(invoiceWithItems, template);
 
 		// Add watermark if needed
 		if (options.customization?.showWatermark) {
 			this.addWatermark(options.customization.watermarkText || 'INVOICE');
 		}
 
-		return this.doc.output('arraybuffer') as Uint8Array;
+		const arrayBuffer = this.doc.output('arraybuffer');
+		return new Uint8Array(arrayBuffer);
 	}
 
 	private async addHeader(
@@ -232,7 +236,7 @@ export class PDFGenerator {
 		this.doc.rect(this.margin, startY - 8, this.pageWidth - 2 * this.margin, currentY - startY + 8);
 	}
 
-	private addTotals(invoice: Invoice) {
+	private addTotals(invoice: Invoice & { items?: InvoiceItem[] }) {
 		const startY = 200 + (invoice.items?.length || 0) * 12;
 		let currentY = startY + 20;
 
@@ -336,14 +340,18 @@ export class PDFGenerator {
 			name: 'Default Template',
 			type: 'standard',
 			description: 'Standard invoice template',
+			logoUrl: null,
 			primaryColor: '#3b82f6',
 			secondaryColor: '#64748b',
 			fontFamily: 'Inter',
+			headerTemplate: null,
+			footerTemplate: null,
+			customCss: null,
 			isDefault: true,
 			isActive: true,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString()
-		} as InvoiceTemplate;
+			createdAt: new Date(),
+			updatedAt: new Date()
+		};
 	}
 
 	private getDefaultCompanyInfo(): CompanyInfo {

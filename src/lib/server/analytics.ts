@@ -137,8 +137,8 @@ export class AnalyticsService {
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					sql`${invoices.createdAt} >= ${monthStart}`,
-					sql`${invoices.createdAt} <= ${monthEnd}`
+					gte(invoices.createdAt, monthStart),
+					lte(invoices.createdAt, monthEnd)
 				)
 			);
 
@@ -151,8 +151,8 @@ export class AnalyticsService {
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					sql`${invoices.createdAt} >= ${lastMonthStart}`,
-					sql`${invoices.createdAt} <= ${lastMonthEnd}`
+					gte(invoices.createdAt, lastMonthStart),
+					lte(invoices.createdAt, lastMonthEnd)
 				)
 			);
 
@@ -164,7 +164,7 @@ export class AnalyticsService {
 			.where(
 				and(
 					eq(invoices.status, 'paid'),
-					sql`${invoices.createdAt} >= ${yearStart}`
+					gte(invoices.createdAt, yearStart)
 				)
 			);
 
@@ -212,8 +212,8 @@ export class AnalyticsService {
 			.from(invoices)
 			.where(
 				and(
-					sql`${invoices.createdAt} >= ${startDate}`,
-					sql`${invoices.createdAt} <= ${endDate}`
+					gte(invoices.createdAt, startDate),
+					lte(invoices.createdAt, endDate)
 				)
 			)
 			.groupBy(invoices.status);
@@ -298,8 +298,8 @@ export class AnalyticsService {
 			.from(payments)
 			.where(
 				and(
-					sql`${payments.createdAt} >= ${startDate}`,
-					sql`${payments.createdAt} <= ${endDate}`
+					gte(payments.createdAt, startDate.toISOString()),
+					lte(payments.createdAt, endDate.toISOString())
 				)
 			);
 
@@ -313,8 +313,8 @@ export class AnalyticsService {
 			.from(payments)
 			.where(
 				and(
-					sql`${payments.createdAt} >= ${startDate}`,
-					sql`${payments.createdAt} <= ${endDate}`
+					gte(payments.createdAt, startDate.toISOString()),
+					lte(payments.createdAt, endDate.toISOString())
 				)
 			)
 			.groupBy(payments.paymentMethod);
@@ -365,8 +365,8 @@ export class AnalyticsService {
 				.where(
 					and(
 						eq(invoices.status, 'paid'),
-						sql`${invoices.createdAt} >= ${date}`,
-						sql`${invoices.createdAt} <= ${nextMonth}`
+						gte(invoices.createdAt, date),
+						lte(invoices.createdAt, nextMonth)
 					)
 				);
 
@@ -420,8 +420,8 @@ export class AnalyticsService {
 				.from(payments)
 				.where(
 					and(
-						sql`${payments.createdAt} >= ${date}`,
-						sql`${payments.createdAt} <= ${nextMonth}`
+						gte(payments.createdAt, date.toISOString()),
+						lte(payments.createdAt, nextMonth.toISOString())
 					)
 				);
 
@@ -450,8 +450,8 @@ export class AnalyticsService {
 				.from(invoices)
 				.where(
 					and(
-						sql`${invoices.createdAt} >= ${date}`,
-						sql`${invoices.createdAt} <= ${nextMonth}`
+						gte(invoices.createdAt, date),
+						lte(invoices.createdAt, nextMonth)
 					)
 				)
 				.groupBy(invoices.status);

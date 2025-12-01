@@ -1,9 +1,8 @@
 <script lang="ts">
-  import InvoiceForm from '$lib/components/invoice-form.svelte';
+  import EnhancedInvoiceForm from '$lib/components/enhanced-invoice-form-new.svelte';
   import { goto } from '$app/navigation';
-  import type { InvoiceFormData } from '$lib/schemas/invoice.js';
   
-  async function handleSubmit(data: InvoiceFormData) {
+  async function handleSubmit(data: any) {
     try {
       const response = await fetch('/api/invoices', {
         method: 'POST',
@@ -38,5 +37,5 @@
     </p>
   </div>
   
-  <InvoiceForm onSubmit={handleSubmit} />
+  <EnhancedInvoiceForm onSubmit={handleSubmit} />
 </div>
