@@ -50,6 +50,7 @@
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.44.5",
+		"html2canvas": "^1.4.1",
 		"jspdf": "^3.0.1",
 		"postgres": "^3.4.7",
 		"resend": "^6.1.2",
