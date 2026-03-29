@@ -20,7 +20,7 @@
 	}>();
 
 	const recentInvoices = $derived(
-		invoices
+		[...invoices]
 			.sort(
 				(a: Invoice, b: Invoice) =>
 					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
