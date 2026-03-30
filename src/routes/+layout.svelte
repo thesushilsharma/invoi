@@ -1,5 +1,6 @@
 <script lang="ts">
-  import '../app.css';
+  import './layout.css';
+	import favicon from '$lib/assets/favicon.svg';
   import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarTrigger, SidebarInset } from '$lib/components/ui/sidebar';
   import { Button } from '$lib/components/ui/button';
   import { Toaster } from '$lib/components/ui/toast';
@@ -24,6 +25,7 @@
   ];
 </script>
 
+<svelte:head><link rel="icon" href={favicon} /></svelte:head>
 <SidebarProvider>
   <Sidebar>
     <SidebarHeader>

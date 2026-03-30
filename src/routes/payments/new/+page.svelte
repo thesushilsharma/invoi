@@ -2,14 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { toast } from '$lib/components/ui/toast';
 
-	let invoiceId = '';
-	let amount = 0;
-	let paymentMethod = 'bank_transfer';
-	let paymentDate = new Date().toISOString().split('T')[0];
-	let transactionId = '';
-	let notes = '';
+	let invoiceId = $state('');
+	let amount = $state(0);
+	let paymentMethod = $state('bank_transfer');
+	let paymentDate = $state(new Date().toISOString().split('T')[0]);
+	let transactionId = $state('');
+	let notes = $state('');
 
-	async function recordPayment() {
+	async function recordPayment(e: SubmitEvent) {
+		e.preventDefault();
 		try {
 			const response = await fetch('/api/payments', {
 				method: 'POST',
@@ -44,7 +45,7 @@
 	<h1 class="mb-6 text-3xl font-bold">Record Payment</h1>
 
 	<div class="rounded-lg bg-white p-6 shadow">
-		<form on:submit|preventDefault={recordPayment} class="space-y-6">
+		<form onsubmit={recordPayment} class="space-y-6">
 			<div>
 				<label for="invoiceId" class="mb-2 block text-sm font-medium text-gray-700">
 					Invoice ID
@@ -132,7 +133,7 @@
 			<div class="flex justify-end space-x-4">
 				<button
 					type="button"
-					on:click={() => goto('/payments')}
+					onclick={() => goto('/payments')}
 					class="rounded-md border border-gray-300 px-6 py-2 text-gray-700 hover:bg-gray-50"
 				>
 					Cancel

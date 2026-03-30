@@ -1,8 +1,12 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   
-  let className: string | undefined = undefined;
-  export { className as class };
+  interface Props {
+    class?: string;
+    [key: string]: any;
+  }
+  
+  let { class: className, ...restProps }: Props = $props();
 </script>
 
-<div class={cn('shrink-0 bg-border h-[1px] w-full', className)} {...$$restProps}></div>
+<div class={cn('shrink-0 bg-border h-px w-full', className)} {...restProps}></div>
