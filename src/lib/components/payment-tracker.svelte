@@ -12,7 +12,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Plus, DollarSign, Calendar } from '@lucide/svelte';
-	import type { Invoice, Payment } from '$lib/db/schema.js';
+	import type { Invoice, Payment } from '$lib/server/db/schema.js';
 	import { paymentSchema, type PaymentFormData } from '$lib/schemas/invoice.js';
 
 	let {
@@ -77,7 +77,7 @@
 
 			const result = paymentSchema.safeParse(paymentForm);
 			if (!result.success) {
-				result.error.errors.forEach((error) => {
+				result.error.issues.forEach((error) => {
 					errors[error.path.join('.')] = error.message;
 				});
 				return;

@@ -28,10 +28,13 @@ export class CurrencyService {
 	// Get exchange rate between two currencies
 	static async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
 		if (fromCurrency === toCurrency) return 1;
+		let cachedRate:
+			| Array<(typeof currencyRates.$inferSelect)>
+			| undefined;
 
 		try {
 			// Try to get from database first
-			const cachedRate = await db
+			cachedRate = await db
 				.select()
 				.from(currencyRates)
 				.where(

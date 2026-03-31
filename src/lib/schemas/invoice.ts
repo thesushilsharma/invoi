@@ -1,19 +1,34 @@
 import { z } from "zod"
 
 export const invoiceItemSchema = z.object({
+  date: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(0.01, "Quantity must be greater than 0"),
+  hours: z.number().min(0).optional(),
   unitPrice: z.number().min(0, "Unit price must be non-negative"),
+  vatPercentage: z.number().min(0).max(100).optional(),
+  vatAmount: z.number().min(0).optional(),
+  total: z.number().min(0).optional(),
 })
 
 export const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
+  poNumber: z.string().optional(),
   clientName: z.string().min(1, "Client name is required"),
   clientEmail: z.string().email("Valid email is required"),
   clientAddress: z.string().min(1, "Client address is required"),
+  clientTrn: z.string().optional(),
+  department: z.string().optional(),
   issueDate: z.string().min(1, "Issue date is required"),
   dueDate: z.string().min(1, "Due date is required"),
   taxRate: z.number().min(0).max(100, "Tax rate must be between 0 and 100"),
+  subtotal: z.number().min(0).optional(),
+  taxAmount: z.number().min(0).optional(),
+  total: z.number().min(0).optional(),
+  totalQuantity: z.number().min(0).optional(),
+  amountInWords: z.string().optional(),
+  currency: z.enum(["AED", "USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY", "INR", "SAR"]).optional(),
+  status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).optional(),
   items: z.array(invoiceItemSchema).min(1, "At least one item is required"),
   notes: z.string().optional(),
   isRecurring: z.boolean().default(false),

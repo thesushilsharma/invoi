@@ -1,7 +1,8 @@
 import { db } from "$lib/server/db"
 import { payments, invoices } from "$lib/server/db/schema"
 import { json } from "@sveltejs/kit"
-import { eq } from "drizzle-orm"
+import { eq, or, sum } from "drizzle-orm"
+import { paymentSchema } from "$lib/schemas/invoice.js"
 
 
 export async function GET() {
@@ -17,28 +18,57 @@ export async function GET() {
 export async function POST({ request }) {
   try {
     const body = await request.json()
-    const { invoiceId, amount, paymentMethod, paymentDate, transactionId, notes } = body
+    const { invoiceId, ...paymentData } = body
+    const parsedPayment = paymentSchema.safeParse(paymentData)
 
-    // Find the invoice first to get the UUID
-    // We assume the user might input the invoice number (e.g. "INV-001")
+    if (!invoiceId) {
+      return json({ error: "Invoice id or invoice number is required" }, { status: 400 })
+    }
+
+    if (!parsedPayment.success) {
+      return json({ error: "Invalid payment data", details: parsedPayment.error.issues }, { status: 400 })
+    }
+
     const [invoice] = await db
       .select()
       .from(invoices)
-      .where(eq(invoices.invoiceNumber, invoiceId))
+      .where(or(eq(invoices.id, invoiceId), eq(invoices.invoiceNumber, invoiceId)))
       .limit(1)
 
     if (!invoice) {
       return json({ error: "Invoice not found" }, { status: 404 })
     }
 
-    const [newPayment] = await db.insert(payments).values({
-      invoiceId: invoice.id,
-      amount,
-      paymentMethod,
-      paymentDate,
-      transactionId,
-      notes
-    }).returning()
+    const paidSoFarResult = await db
+      .select({ totalPaid: sum(payments.amount) })
+      .from(payments)
+      .where(eq(payments.invoiceId, invoice.id))
+
+    const paidSoFar = Number(paidSoFarResult[0]?.totalPaid || 0)
+    const newTotalPaid = paidSoFar + parsedPayment.data.amount
+
+    if (newTotalPaid > invoice.total) {
+      return json({ error: "Payment amount exceeds invoice balance" }, { status: 400 })
+    }
+
+    const [newPayment] = await db.transaction(async (tx) => {
+      const [createdPayment] = await tx.insert(payments).values({
+        invoiceId: invoice.id,
+        ...parsedPayment.data
+      }).returning()
+
+      const nextStatus = newTotalPaid >= invoice.total ? "paid" : invoice.status === "draft" ? "sent" : invoice.status
+
+      await tx
+        .update(invoices)
+        .set({
+          status: nextStatus,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(invoices.id, invoice.id))
+
+      return [createdPayment]
+    })
 
     return json(newPayment)
   } catch (error) {

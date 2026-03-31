@@ -20,6 +20,23 @@ export async function GET() {
   }
 }
 
+function normalizeInvoiceItem(item: (typeof invoiceSchema._type)["items"][number], invoiceTaxRate: number) {
+  const lineSubtotal = calculateItemTotal(item.quantity, item.unitPrice)
+  const vatPercentage = item.vatPercentage ?? invoiceTaxRate
+  const vatAmount = Math.round(lineSubtotal * (vatPercentage / 100) * 100) / 100
+
+  return {
+    date: item.date ?? null,
+    description: item.description,
+    quantity: item.quantity,
+    hours: item.hours ?? null,
+    unitPrice: item.unitPrice,
+    vatPercentage,
+    vatAmount,
+    total: lineSubtotal,
+  }
+}
+
 export async function POST({ request }) {
   try {
     const data = await request.json()
@@ -31,41 +48,43 @@ export async function POST({ request }) {
 
     const { items, ...invoiceData } = result.data
 
-    // Calculate totals
-    const itemsWithTotals = items.map((item) => ({
-      ...item,
-      total: calculateItemTotal(item.quantity, item.unitPrice),
-    }))
-
-    const subtotal = itemsWithTotals.reduce((sum, item) => sum + item.total, 0)
+    const itemsWithTotals = items.map((item) => normalizeInvoiceItem(item, invoiceData.taxRate))
+    const subtotal = calculateSubtotal(itemsWithTotals)
     const taxAmount = calculateTaxAmount(subtotal, invoiceData.taxRate)
     const total = calculateTotal(subtotal, taxAmount)
+    const totalQuantity = Math.round(itemsWithTotals.reduce((sum, item) => sum + item.quantity, 0) * 100) / 100
 
-    // Create invoice
-    const [newInvoice] = await db
-      .insert(invoices)
-      .values({
-        ...invoiceData,
-        subtotal,
-        taxAmount,
-        total,
-        nextRecurringDate:
-          invoiceData.isRecurring && invoiceData.recurringInterval
-            ? getNextRecurringDate(invoiceData.issueDate, invoiceData.recurringInterval)
-            : null,
-      })
-      .returning()
+    const { newInvoice, newItems } = await db.transaction(async (tx) => {
+      const [createdInvoice] = await tx
+        .insert(invoices)
+        .values({
+          ...invoiceData,
+          subtotal,
+          taxAmount,
+          total,
+          totalQuantity,
+          amountInWords: invoiceData.amountInWords ?? null,
+          currency: invoiceData.currency ?? "AED",
+          status: invoiceData.status ?? "draft",
+          nextRecurringDate:
+            invoiceData.isRecurring && invoiceData.recurringInterval
+              ? getNextRecurringDate(invoiceData.issueDate, invoiceData.recurringInterval)
+              : null,
+        })
+        .returning()
 
-    // Create invoice items
-    const newItems = await db
-      .insert(invoiceItems)
-      .values(
-        itemsWithTotals.map((item) => ({
-          ...item,
-          invoiceId: newInvoice.id,
-        })),
-      )
-      .returning()
+      const createdItems = await tx
+        .insert(invoiceItems)
+        .values(
+          itemsWithTotals.map((item) => ({
+            ...item,
+            invoiceId: createdInvoice.id,
+          })),
+        )
+        .returning()
+
+      return { newInvoice: createdInvoice, newItems: createdItems }
+    })
 
     return json({ ...newInvoice, items: newItems })
   } catch (error) {

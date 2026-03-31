@@ -3,6 +3,31 @@ import { db } from '$lib/server/db';
 import { invoices, invoiceItems } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
+import { invoiceSchema } from '$lib/schemas/invoice.js';
+import {
+	calculateItemTotal,
+	calculateSubtotal,
+	calculateTaxAmount,
+	calculateTotal,
+	getNextRecurringDate
+} from '$lib/utils/calculations.js';
+
+function normalizeInvoiceItem(item: (typeof invoiceSchema._type)['items'][number], invoiceTaxRate: number) {
+	const lineSubtotal = calculateItemTotal(item.quantity, item.unitPrice);
+	const vatPercentage = item.vatPercentage ?? invoiceTaxRate;
+	const vatAmount = Math.round(lineSubtotal * (vatPercentage / 100) * 100) / 100;
+
+	return {
+		date: item.date ?? null,
+		description: item.description,
+		quantity: item.quantity,
+		hours: item.hours ?? null,
+		unitPrice: item.unitPrice,
+		vatPercentage,
+		vatAmount,
+		total: lineSubtotal
+	};
+}
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -51,37 +76,49 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 export const PUT: RequestHandler = async ({ params, request }) => {
 	try {
 		const data = await request.json();
-		const { items: newItems, ...invoiceData } = data;
+		const result = invoiceSchema.safeParse(data);
 
-		// Update invoice
-		const [updatedInvoice] = await db
-			.update(invoices)
-			.set({ 
-				...invoiceData, 
-				updatedAt: new Date().toISOString() 
-			})
-			.where(eq(invoices.id, params.id))
-			.returning();
+		if (!result.success) {
+			return json({ error: 'Invalid invoice data', details: result.error.issues }, { status: 400 });
+		}
 
-		// Delete existing items
-		await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, params.id));
+		const { items: newItems, ...invoiceData } = result.data;
+		const itemsWithTotals = newItems.map((item) => normalizeInvoiceItem(item, invoiceData.taxRate));
+		const subtotal = calculateSubtotal(itemsWithTotals);
+		const taxAmount = calculateTaxAmount(subtotal, invoiceData.taxRate);
+		const total = calculateTotal(subtotal, taxAmount);
+		const totalQuantity =
+			Math.round(itemsWithTotals.reduce((sum, item) => sum + item.quantity, 0) * 100) / 100;
 
-		// Insert new items
-		if (newItems && newItems.length > 0) {
-			await db.insert(invoiceItems).values(
-				newItems.map((item: any) => ({
+		const updatedInvoice = await db.transaction(async (tx) => {
+			const [invoice] = await tx
+				.update(invoices)
+				.set({
+					...invoiceData,
+					subtotal,
+					taxAmount,
+					total,
+					totalQuantity,
+					nextRecurringDate:
+						invoiceData.isRecurring && invoiceData.recurringInterval
+							? getNextRecurringDate(invoiceData.issueDate, invoiceData.recurringInterval)
+							: null,
+					updatedAt: new Date().toISOString()
+				})
+				.where(eq(invoices.id, params.id))
+				.returning();
+
+			await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, params.id));
+
+			await tx.insert(invoiceItems).values(
+				itemsWithTotals.map((item) => ({
 					invoiceId: params.id,
-					date: item.date,
-					description: item.description,
-					quantity: item.quantity,
-					hours: item.hours,
-					unitPrice: item.unitPrice,
-					vatPercentage: item.vatPercentage,
-					vatAmount: item.vatAmount,
-					total: item.total
+					...item
 				}))
 			);
-		}
+
+			return invoice;
+		});
 
 		return json(updatedInvoice);
 	} catch (error) {

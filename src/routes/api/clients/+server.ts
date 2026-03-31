@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { clients } from '$lib/server/db/schema';
-import { eq, ilike, desc } from 'drizzle-orm';
+import { ilike, desc, count } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -10,19 +10,17 @@ export const GET: RequestHandler = async ({ url }) => {
 		const limit = parseInt(url.searchParams.get('limit') || '50');
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 
-		let query = db.select().from(clients).orderBy(desc(clients.createdAt));
-
-		if (search) {
-			query = query.where(
-				ilike(clients.name, `%${search}%`)
-			);
-		}
-
-		const result = await query.limit(limit).offset(offset);
+		const filter = search ? ilike(clients.name, `%${search}%`) : undefined;
+		const result = await (filter
+			? db.select().from(clients).where(filter).orderBy(desc(clients.createdAt)).limit(limit).offset(offset)
+			: db.select().from(clients).orderBy(desc(clients.createdAt)).limit(limit).offset(offset));
+		const totalResult = await (filter
+			? db.select({ count: count() }).from(clients).where(filter)
+			: db.select({ count: count() }).from(clients));
 
 		return json({
 			clients: result,
-			total: result.length
+			total: totalResult[0]?.count ?? 0
 		});
 	} catch (error) {
 		console.error('Error fetching clients:', error);

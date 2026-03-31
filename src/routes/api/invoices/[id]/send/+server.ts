@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { invoices, invoiceItems } from '$lib/server/db/schema';
+import { invoices, invoiceItems, settings } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { sendInvoiceEmail } from '$lib/server/email-service';
-import { PDFGenerator } from '$lib/server/pdf-generator';
+import { EnhancedPDFGenerator } from '$lib/server/pdf-generator-enhanced';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params }) => {
@@ -15,10 +15,16 @@ export const POST: RequestHandler = async ({ params }) => {
 		}
 
 		const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, params.id));
+		const [companySettings] = await db.select().from(settings).limit(1);
 
-		// Generate PDF
-		const pdfGenerator = new PDFGenerator();
-		const pdfBuffer = await pdfGenerator.generateInvoicePDF(invoice, items);
+		const pdfGenerator = new EnhancedPDFGenerator();
+		const pdfBuffer = await pdfGenerator.generateInvoicePDF(invoice, items, {
+			settings: companySettings,
+			logoBase64: companySettings?.companyLogo || undefined,
+			stampBase64: companySettings?.companyStamp || undefined,
+			signatureBase64: companySettings?.companySignature || undefined,
+			showWatermark: !!companySettings?.companyLogo
+		});
 
 		// Send email
 		const result = await sendInvoiceEmail(invoice, Buffer.from(pdfBuffer));

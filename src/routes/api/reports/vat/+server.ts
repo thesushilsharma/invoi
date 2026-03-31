@@ -14,6 +14,9 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
+		const startBoundary = new Date(`${startDate}T00:00:00.000Z`).toISOString();
+		const endBoundary = new Date(`${endDate}T23:59:59.999Z`).toISOString();
+
 		const vatData = await db
 			.select({
 				invoiceNumber: invoices.invoiceNumber,
@@ -29,8 +32,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			.from(invoices)
 			.where(
 				and(
-					gte(invoices.issueDate, startDate),
-					lte(invoices.issueDate, endDate),
+					gte(invoices.issueDate, startBoundary),
+					lte(invoices.issueDate, endBoundary),
 					sql`${invoices.status} != 'cancelled'`
 				)
 			)
