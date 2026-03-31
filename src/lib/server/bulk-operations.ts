@@ -344,7 +344,7 @@ export class BulkOperationsService {
 			taxRate: invoiceData.taxRate,
 			taxAmount,
 			total,
-			currency: invoiceData.currency,
+			currency: invoiceData.currency as NewInvoice['currency'],
 			templateId: options.templateId,
 			status: options.autoSend ? 'sent' : 'draft',
 			notes: invoiceData.notes,

@@ -4,6 +4,7 @@ import { invoices, invoiceItems } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { invoiceSchema } from '$lib/schemas/invoice.js';
+import type { z } from 'zod';
 import {
 	calculateItemTotal,
 	calculateSubtotal,
@@ -12,7 +13,10 @@ import {
 	getNextRecurringDate
 } from '$lib/utils/calculations.js';
 
-function normalizeInvoiceItem(item: (typeof invoiceSchema._type)['items'][number], invoiceTaxRate: number) {
+type InvoicePayload = z.infer<typeof invoiceSchema>;
+type InvoiceItemPayload = InvoicePayload['items'][number];
+
+function normalizeInvoiceItem(item: InvoiceItemPayload, invoiceTaxRate: number) {
 	const lineSubtotal = calculateItemTotal(item.quantity, item.unitPrice);
 	const vatPercentage = item.vatPercentage ?? invoiceTaxRate;
 	const vatAmount = Math.round(lineSubtotal * (vatPercentage / 100) * 100) / 100;
@@ -103,7 +107,7 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 						invoiceData.isRecurring && invoiceData.recurringInterval
 							? getNextRecurringDate(invoiceData.issueDate, invoiceData.recurringInterval)
 							: null,
-					updatedAt: new Date().toISOString()
+					updatedAt: new Date()
 				})
 				.where(eq(invoices.id, params.id))
 				.returning();

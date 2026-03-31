@@ -1,5 +1,6 @@
 import { json } from "@sveltejs/kit"
 import { invoiceSchema } from "$lib/schemas/invoice.js"
+import type { z } from "zod"
 import {
   calculateItemTotal,
   calculateSubtotal,
@@ -9,6 +10,9 @@ import {
 } from "$lib/utils/calculations.js"
 import { db } from "$lib/server/db"
 import { invoiceItems, invoices } from "$lib/server/db/schema"
+
+type InvoicePayload = z.infer<typeof invoiceSchema>
+type InvoiceItemPayload = InvoicePayload["items"][number]
 
 export async function GET() {
   try {
@@ -20,7 +24,7 @@ export async function GET() {
   }
 }
 
-function normalizeInvoiceItem(item: (typeof invoiceSchema._type)["items"][number], invoiceTaxRate: number) {
+function normalizeInvoiceItem(item: InvoiceItemPayload, invoiceTaxRate: number) {
   const lineSubtotal = calculateItemTotal(item.quantity, item.unitPrice)
   const vatPercentage = item.vatPercentage ?? invoiceTaxRate
   const vatAmount = Math.round(lineSubtotal * (vatPercentage / 100) * 100) / 100

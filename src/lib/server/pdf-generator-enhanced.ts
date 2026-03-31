@@ -65,7 +65,7 @@ export class EnhancedPDFGenerator {
 
 			// Set opacity for watermark effect
 			this.doc.saveGraphicsState();
-			this.doc.setGState(new this.doc.GState({ opacity: 0.1 }));
+			this.doc.setGState(new (this.doc as any).GState({ opacity: 0.1 }));
 			this.doc.addImage(logoBase64, 'PNG', x, y, imgWidth, imgHeight);
 			this.doc.restoreGraphicsState();
 		} catch (error) {

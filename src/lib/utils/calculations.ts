@@ -1,10 +1,8 @@
-import type { InvoiceItem } from "$lib/server/db/schema"
-
 export function calculateItemTotal(quantity: number, unitPrice: number): number {
   return Math.round(quantity * unitPrice * 100) / 100
 }
 
-export function calculateSubtotal(items: InvoiceItem[]): number {
+export function calculateSubtotal(items: Array<{ total: number }>): number {
   return Math.round(items.reduce((sum, item) => sum + item.total, 0) * 100) / 100
 }
 

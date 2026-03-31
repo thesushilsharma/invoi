@@ -5,7 +5,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { Plus, Trash2 } from '@lucide/svelte';
 	import { invoiceSchema, type InvoiceFormData } from '$lib/schemas/invoice.js';
 	import {
@@ -90,7 +89,7 @@
 
 			const result = invoiceSchema.safeParse(formData);
 			if (!result.success) {
-				result.error.errors.forEach((error) => {
+				result.error.issues.forEach((error) => {
 					errors[error.path.join('.')] = error.message;
 				});
 				return;
@@ -227,7 +226,7 @@
 		</CardHeader>
 		<CardContent>
 			<div class="space-y-4">
-				{#each formData.items as item, index}
+				{#each formData.items as item, index (`${index}-${item.description}`)}
 					<div class="grid grid-cols-1 gap-4 rounded-lg border p-4 md:grid-cols-5">
 						<div class="md:col-span-2">
 							<Label for="description-{index}">Description</Label>
@@ -325,16 +324,16 @@
 			{#if formData.isRecurring}
 				<div>
 					<Label for="recurringInterval">Recurring Interval</Label>
-					<Select bind:value={formData.recurringInterval}>
-						<SelectTrigger>
-							{selectedIntervalLabel}
-						</SelectTrigger>
-						<SelectContent>
-							{#each recurringIntervals as interval}
-								<SelectItem value={interval.value}>{interval.label}</SelectItem>
-							{/each}
-						</SelectContent>
-					</Select>
+					<select
+						id="recurringInterval"
+						bind:value={formData.recurringInterval}
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+					>
+						<option value="" disabled>{selectedIntervalLabel}</option>
+						{#each recurringIntervals as interval (interval.value)}
+							<option value={interval.value}>{interval.label}</option>
+						{/each}
+					</select>
 				</div>
 			{/if}
 		</CardContent>

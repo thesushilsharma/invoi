@@ -3,12 +3,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		Select,
-		SelectContent,
-		SelectItem,
-		SelectTrigger
-	} from '$lib/components/ui/select';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Plus, DollarSign, Calendar } from '@lucide/svelte';
@@ -54,7 +48,7 @@
 			: 'Select payment method'
 	);
 
-	const totalPaid = $derived(payments.reduce((sum, payment) => sum + payment.amount, 0));
+	const totalPaid = $derived(payments.reduce((sum: number, payment: Payment) => sum + payment.amount, 0));
 	const remainingBalance = $derived(invoice.total - totalPaid);
 	const paymentProgress = $derived((totalPaid / invoice.total) * 100);
 
@@ -220,16 +214,16 @@
 
 						<div>
 							<Label for="paymentMethod">Payment Method</Label>
-							<Select bind:value={paymentForm.paymentMethod}>
-								<SelectTrigger class={errors.paymentMethod ? 'border-red-500' : ''}>
-									{selectedPaymentMethodLabel}
-								</SelectTrigger>
-								<SelectContent>
-									{#each paymentMethods as method}
-										<SelectItem value={method.value}>{method.label}</SelectItem>
-									{/each}
-								</SelectContent>
-							</Select>
+							<select
+								id="paymentMethod"
+								bind:value={paymentForm.paymentMethod}
+								class={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${errors.paymentMethod ? 'border-red-500' : 'border-input'}`}
+							>
+								<option value="" disabled>{selectedPaymentMethodLabel}</option>
+								{#each paymentMethods as method (method.value)}
+									<option value={method.value}>{method.label}</option>
+								{/each}
+							</select>
 							{#if errors.paymentMethod}
 								<p class="mt-1 text-sm text-red-500">{errors.paymentMethod}</p>
 							{/if}
@@ -281,7 +275,7 @@
 		</CardHeader>
 		<CardContent>
 			<div class="space-y-4">
-				{#each payments as payment}
+				{#each payments as payment (payment.id)}
 					<div class="flex items-center justify-between rounded-lg border p-4">
 						<div class="flex items-center space-x-4">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
