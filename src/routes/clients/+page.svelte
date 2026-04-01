@@ -11,7 +11,11 @@
 
 	let { data }: { data: PageData } = $props();
 	let showCreateForm = $state(false);
-	let searchQuery = $state(data.search);
+	let searchQuery = $state('');
+
+	$effect(() => {
+		searchQuery = data.search;
+	});
 
 	// Check for prefill parameter to auto-open create form
 	$effect(() => {

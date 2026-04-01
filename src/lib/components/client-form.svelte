@@ -17,18 +17,26 @@
 		onsuccess: () => void;
 	}>();
 
-	let formData = $state({
-		name: client?.name || '',
-		email: client?.email || '',
-		phone: client?.phone || '',
-		address: client?.address || '',
-		city: client?.city || '',
-		state: client?.state || '',
-		zipCode: client?.zipCode || '',
-		country: client?.country || '',
-		taxId: client?.taxId || '',
-		notes: client?.notes || '',
-		isActive: client?.isActive ?? true
+	function getFormData(currentClient: Client | null) {
+		return {
+			name: currentClient?.name || '',
+			email: currentClient?.email || '',
+			phone: currentClient?.phone || '',
+			address: currentClient?.address || '',
+			city: currentClient?.city || '',
+			state: currentClient?.state || '',
+			zipCode: currentClient?.zipCode || '',
+			country: currentClient?.country || '',
+			taxId: currentClient?.taxId || '',
+			notes: currentClient?.notes || '',
+			isActive: currentClient?.isActive ?? true
+		};
+	}
+
+	let formData = $state(getFormData(null));
+
+	$effect(() => {
+		formData = getFormData(client);
 	});
 
 	let isSubmitting = $state(false);
@@ -46,7 +54,7 @@
 
 		try {
 			const url = client ? `/api/clients/${client.id}` : '/api/clients';
-			const method = client ? 'PUT' : 'POST';
+			const method = client ? 'PATCH' : 'POST';
 
 			const response = await fetch(url, {
 				method,

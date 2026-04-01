@@ -26,8 +26,13 @@
 	let isRefreshing = $state(false);
 
 	let dateRange = $state({
-		startDate: data.dateRange.startDate,
-		endDate: data.dateRange.endDate
+		startDate: '',
+		endDate: ''
+	});
+
+	$effect(() => {
+		dateRange.startDate = data.dateRange.startDate;
+		dateRange.endDate = data.dateRange.endDate;
 	});
 
 	async function handleDateRangeChange() {

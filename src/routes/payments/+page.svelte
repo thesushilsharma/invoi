@@ -2,8 +2,6 @@
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	const { payments } = data;
 </script>
 
 <div class="container mx-auto p-6">
@@ -18,7 +16,7 @@
 	</div>
 
 	<div class="bg-white shadow rounded-lg overflow-hidden">
-		{#if payments && payments.length > 0}
+		{#if data.payments && data.payments.length > 0}
 			<table class="min-w-full">
 				<thead class="bg-gray-50">
 					<tr>
@@ -40,7 +38,7 @@
 					</tr>
 				</thead>
 				<tbody class="bg-white divide-y divide-gray-200">
-					{#each payments as payment}
+					{#each data.payments as payment (payment.id)}
 						<tr>
 							<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 								{new Date(payment.createdAt).toLocaleDateString()}
