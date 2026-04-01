@@ -9,6 +9,7 @@
 	import { goto } from '$app/navigation';
 	import type { Invoice, InvoiceItem } from '$lib/server/db/schema';
 	import InvoiceTemplatePreview from '$lib/components/InvoiceTemplatePreview.svelte';
+	import { exportElementToPdf } from '$lib/utils/html2canvas-pdf';
 
 
 	let invoice = $state<Invoice | null>(null);
@@ -61,24 +62,33 @@
 	}
 
 	async function downloadPDF() {
-		if (!invoice) return;
+		if (!invoice || !previewContainer) return;
 
 		isDownloading = true;
 		try {
-			const res = await fetch(`/api/invoices/${invoiceId}/pdf`);
-			if (!res.ok) {
-				const msg = await res.text();
-				throw new Error(msg || 'Failed to generate PDF');
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			const images = previewContainer.querySelectorAll('img');
+			if (images.length > 0) {
+				await Promise.all(
+					Array.from(images).map(
+						(img) =>
+							new Promise((resolve) => {
+								if (img.complete) {
+									resolve(undefined);
+								} else {
+									img.onload = () => resolve(undefined);
+									img.onerror = () => resolve(undefined);
+									setTimeout(() => resolve(undefined), 2000);
+								}
+							})
+					)
+				);
 			}
-			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `${invoice.invoiceNumber}.pdf`;
-			document.body.appendChild(a);
-			a.click();
-			URL.revokeObjectURL(url);
-			document.body.removeChild(a);
+
+			await new Promise((resolve) => setTimeout(resolve, 200));
+
+			await exportElementToPdf(previewContainer, `${invoice.invoiceNumber}.pdf`);
 		} catch (error) {
 			console.error('Failed to download PDF:', error);
 			alert(`Failed to generate PDF. ${error instanceof Error ? error.message : ''}`);
@@ -282,45 +292,11 @@
 					companyAddress={companySettings.companyAddress}
 					companyEmail={companySettings.companyEmail}
 					companyTrn={companySettings.companyTaxId}
+					{invoice}
+					{items}
 				/>
 			{/if}
 		</div>
 	</div>
 </div>
 
-<style>
-  .pdf-snapshot {
-    /* Override CSS vars that use oklch() with hex/HSL fallbacks html2canvas supports */
-    --background: #ffffff;
-    --foreground: #111827; /* gray-900 */
-    --card: #ffffff;
-    --card-foreground: #111827;
-    --popover: #ffffff;
-    --popover-foreground: #111827;
-    --primary: #111827;
-    --primary-foreground: #fafafa;
-    --secondary: #f4f4f5; /* zinc-100 */
-    --secondary-foreground: #111827;
-    --muted: #f4f4f5;
-    --muted-foreground: #6b7280; /* gray-500 */
-    --accent: #f4f4f5;
-    --accent-foreground: #111827;
-    --destructive: #ef4444; /* red-500 */
-    --border: #e5e7eb; /* gray-200 */
-    --input: #e5e7eb;
-    --ring: #94a3b8; /* slate-400 */
-    --chart-1: #16a34a; /* green-600 */
-    --chart-2: #0ea5e9; /* sky-500 */
-    --chart-3: #6366f1; /* indigo-500 */
-    --chart-4: #f59e0b; /* amber-500 */
-    --chart-5: #e11d48; /* rose-600 */
-    --sidebar: #ffffff;
-    --sidebar-foreground: #111827;
-    --sidebar-primary: #111827;
-    --sidebar-primary-foreground: #fafafa;
-    --sidebar-accent: #f4f4f5;
-    --sidebar-accent-foreground: #111827;
-    --sidebar-border: #e5e7eb;
-    --sidebar-ring: #94a3b8;
-  }
-</style>

@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { jsPDF } from 'jspdf';
-	import html2canvas from 'html2canvas';
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
 	import { Badge } from "$lib/components/ui/badge";
@@ -9,6 +7,7 @@
 	import { Upload, Plus, Search, Eye, Edit, Download, Trash2 } from '@lucide/svelte';
 	import InvoiceTemplatePreview from '$lib/components/InvoiceTemplatePreview.svelte';
 	import type { Invoice, InvoiceItem } from '$lib/server/db/schema';
+	import { exportElementToPdf } from '$lib/utils/html2canvas-pdf';
 
 	let invoices: Invoice[] = $state([]);
 	let filteredInvoices: Invoice[] = $state([]);
@@ -114,55 +113,7 @@
 			// Additional wait for rendering
 			await new Promise((resolve) => setTimeout(resolve, 200));
 
-			const canvas = await html2canvas(previewContainer, {
-				scale: 2,
-				useCORS: true,
-				logging: false,
-				backgroundColor: '#ffffff',
-				allowTaint: true,
-				width: previewContainer.scrollWidth,
-				height: previewContainer.scrollHeight
-			});
-
-			if (!canvas) {
-				throw new Error('Failed to create canvas');
-			}
-
-			const imgData = canvas.toDataURL('image/png');
-			if (!imgData || imgData === 'data:,') {
-				throw new Error('Failed to generate image data');
-			}
-
-			const pdf = new jsPDF({
-				orientation: 'portrait',
-				unit: 'mm',
-				format: 'a4'
-			});
-
-			const imgProps = pdf.getImageProperties(imgData);
-			const pdfWidth = pdf.internal.pageSize.getWidth();
-			const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-			// Handle multi-page PDF if content is too tall
-			if (pdfHeight > pdf.internal.pageSize.getHeight()) {
-				const pageHeight = pdf.internal.pageSize.getHeight();
-				let heightLeft = pdfHeight;
-				let position = 0;
-
-				pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-				heightLeft -= pageHeight;
-
-				while (heightLeft > 0) {
-					position = heightLeft - pdfHeight;
-					pdf.addPage();
-					pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-					heightLeft -= pageHeight;
-				}
-			} else {
-				pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-			}
-
-			pdf.save(`${invoice.invoiceNumber}.pdf`);
+			await exportElementToPdf(previewContainer, `${invoice.invoiceNumber}.pdf`);
 		} catch (error) {
 			console.error('Failed to download PDF:', error);
 			alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);

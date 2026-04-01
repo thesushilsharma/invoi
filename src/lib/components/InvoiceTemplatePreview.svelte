@@ -1,6 +1,42 @@
 <script lang="ts">
 	import type { Invoice, InvoiceItem } from '$lib/server/db/schema';
 
+	type PreviewInvoice = {
+		id?: string;
+		invoiceNumber?: string;
+		poNumber?: string | null;
+		clientName?: string;
+		clientEmail?: string | null;
+		clientAddress?: string | null;
+		clientTrn?: string | null;
+		department?: string | null;
+		issueDate?: string | Date | null;
+		dueDate?: string | Date | null;
+		currency?: string | null;
+		status?: string | null;
+		subtotal?: number | null;
+		taxRate?: number | null;
+		taxAmount?: number | null;
+		total?: number | null;
+		totalQuantity?: number | null;
+		amountInWords?: string | null;
+		notes?: string | null;
+	};
+
+	type PreviewInvoiceItem = {
+		id?: string;
+		invoiceId?: string;
+		createdAt?: Date;
+		date?: string | null;
+		description: string;
+		quantity: number;
+		hours?: number | null;
+		unitPrice: number;
+		vatPercentage?: number | null;
+		vatAmount?: number | null;
+		total: number;
+	};
+
 	interface Props {
 		logoUrl?: string;
 		stampUrl?: string;
@@ -11,8 +47,8 @@
 		companyAddress?: string;
 		companyEmail?: string;
 		companyTrn?: string;
-		invoice?: Invoice | null;
-		items?: InvoiceItem[];
+		invoice?: PreviewInvoice | null;
+		items?: PreviewInvoiceItem[];
 	}
 
 	let { 
@@ -29,10 +65,10 @@
 		items = []
 	}: Props = $props();
 
-	function formatDate(dateString: string | null | undefined): string {
-		if (!dateString) return 'DD-MM-YYYY';
+	function formatDate(dateValue: string | Date | null | undefined): string {
+		if (!dateValue) return 'DD-MM-YYYY';
 		try {
-			const date = new Date(dateString);
+			const date = new Date(dateValue);
 			return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 		} catch {
 			return 'DD-MM-YYYY';

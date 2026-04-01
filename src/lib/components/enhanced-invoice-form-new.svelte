@@ -26,36 +26,72 @@
 	}
 
 	let { onSubmit, initialData = null }: Props = $props();
+	function getInitialDate(value: string | Date | null | undefined, fallback: string) {
+		if (!value) return fallback;
+		return typeof value === 'string'
+			? value.split('T')[0]
+			: new Date(value).toISOString().split('T')[0];
+	}
 
-	// Determine template type based on initial data
-	const hasEnhancedFields = initialData?.items?.some(
-		(item: any) => item.date || item.hours || item.vatPercentage
-	);
+	function getInitialItems(data: any): InvoiceItem[] {
+		if (data?.items && data.items.length > 0) {
+			return data.items.map((item: any) => ({
+				date: item.date || new Date().toISOString().split('T')[0],
+				description: item.description || '',
+				quantity: item.quantity || 1,
+				hours: item.hours || 0,
+				unitPrice: item.unitPrice || 0,
+				vatPercentage: item.vatPercentage || 5,
+				vatAmount: item.vatAmount || 0,
+				total: item.total || 0
+			}));
+		}
 
-	let templateType = $state<'basic' | 'enhanced'>(hasEnhancedFields ? 'enhanced' : 'enhanced');
-	let invoiceNumber = $state(initialData?.invoiceNumber || `INV-${Date.now()}`);
-	let poNumber = $state(initialData?.poNumber || '');
-	let clientName = $state(initialData?.clientName || '');
-	let clientEmail = $state(initialData?.clientEmail || '');
-	let clientAddress = $state(initialData?.clientAddress || '');
-	let clientTrn = $state(initialData?.clientTrn || '');
-	let department = $state(initialData?.department || '');
-	let issueDate = $state(
-		initialData?.issueDate
-			? typeof initialData.issueDate === 'string'
-				? initialData.issueDate.split('T')[0]
-				: new Date(initialData.issueDate).toISOString().split('T')[0]
-			: new Date().toISOString().split('T')[0]
-	);
-	let dueDate = $state(
-		initialData?.dueDate
-			? typeof initialData.dueDate === 'string'
-				? initialData.dueDate.split('T')[0]
-				: new Date(initialData.dueDate).toISOString().split('T')[0]
-			: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-	);
-	let taxRate = $state(initialData?.taxRate || 5);
-	let notes = $state(initialData?.notes || '');
+		return [
+			{
+				date: new Date().toISOString().split('T')[0],
+				description: '',
+				quantity: 1,
+				hours: 0,
+				unitPrice: 0,
+				vatPercentage: 5,
+				vatAmount: 0,
+				total: 0
+			}
+		];
+	}
+
+	function getInitialFormData(data: any) {
+		return {
+			invoiceNumber: data?.invoiceNumber || `INV-${Date.now()}`,
+			poNumber: data?.poNumber || '',
+			clientName: data?.clientName || '',
+			clientEmail: data?.clientEmail || '',
+			clientAddress: data?.clientAddress || '',
+			clientTrn: data?.clientTrn || '',
+			department: data?.department || '',
+			issueDate: getInitialDate(data?.issueDate, new Date().toISOString().split('T')[0]),
+			dueDate: getInitialDate(
+				data?.dueDate,
+				new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+			),
+			taxRate: data?.taxRate || 5,
+			notes: data?.notes || '',
+			items: getInitialItems(data)
+		};
+	}
+
+	let invoiceNumber = $state('');
+	let poNumber = $state('');
+	let clientName = $state('');
+	let clientEmail = $state('');
+	let clientAddress = $state('');
+	let clientTrn = $state('');
+	let department = $state('');
+	let issueDate = $state('');
+	let dueDate = $state('');
+	let taxRate = $state(5);
+	let notes = $state('');
 	let isSubmitting = $state(false);
 
 	// Settings for preview
@@ -72,31 +108,23 @@
 		}
 	});
 
-	let items = $state<InvoiceItem[]>(
-		initialData?.items && initialData.items.length > 0
-			? initialData.items.map((item: any) => ({
-					date: item.date || new Date().toISOString().split('T')[0],
-					description: item.description || '',
-					quantity: item.quantity || 1,
-					hours: item.hours || 0,
-					unitPrice: item.unitPrice || 0,
-					vatPercentage: item.vatPercentage || 5,
-					vatAmount: item.vatAmount || 0,
-					total: item.total || 0
-				}))
-			: [
-					{
-						date: new Date().toISOString().split('T')[0],
-						description: '',
-						quantity: 1,
-						hours: 0,
-						unitPrice: 0,
-						vatPercentage: 5,
-						vatAmount: 0,
-						total: 0
-					}
-				]
-	);
+	let items = $state<InvoiceItem[]>(getInitialItems(null));
+
+	$effect(() => {
+		const formData = getInitialFormData(initialData);
+		invoiceNumber = formData.invoiceNumber;
+		poNumber = formData.poNumber;
+		clientName = formData.clientName;
+		clientEmail = formData.clientEmail;
+		clientAddress = formData.clientAddress;
+		clientTrn = formData.clientTrn;
+		department = formData.department;
+		issueDate = formData.issueDate;
+		dueDate = formData.dueDate;
+		taxRate = formData.taxRate;
+		notes = formData.notes;
+		items = formData.items;
+	});
 
 	const subtotal = $derived(items.reduce((sum, item) => sum + (item.total || 0), 0));
 	const totalVat = $derived(items.reduce((sum, item) => sum + (item.vatAmount || 0), 0));
@@ -107,6 +135,41 @@
 		const baseAmount = item.quantity * item.unitPrice;
 		item.vatAmount = baseAmount * ((item.vatPercentage || 0) / 100);
 		item.total = baseAmount;
+	}
+
+	function getPreviewInvoice() {
+		return {
+			invoiceNumber,
+			clientName,
+			clientEmail,
+			clientAddress,
+			clientTrn,
+			department,
+			issueDate,
+			dueDate,
+			subtotal,
+			taxRate,
+			taxAmount: totalVat,
+			total,
+			totalQuantity,
+			amountInWords: numberToWords(total),
+			currency: 'AED',
+			status: initialData?.status || 'draft',
+			notes
+		};
+	}
+
+	function getPreviewItems() {
+		return items.map((item) => ({
+			date: item.date,
+			description: item.description,
+			quantity: item.quantity,
+			hours: item.hours,
+			unitPrice: item.unitPrice,
+			vatPercentage: item.vatPercentage,
+			vatAmount: item.vatAmount,
+			total: item.total
+		}));
 	}
 
 	function addItem() {
@@ -197,27 +260,27 @@
 				clientName,
 				clientEmail,
 				clientAddress,
-				clientTrn: templateType === 'enhanced' ? clientTrn : undefined,
-				department: templateType === 'enhanced' ? department : undefined,
+				clientTrn: clientTrn || undefined,
+				department: department || undefined,
 				issueDate,
 				dueDate,
 				subtotal,
 				taxRate,
 				taxAmount: totalVat,
 				total,
-				totalQuantity: templateType === 'enhanced' ? totalQuantity : undefined,
-				amountInWords: templateType === 'enhanced' ? numberToWords(total) : undefined,
+				totalQuantity,
+				amountInWords: numberToWords(total),
 				currency: 'AED',
-				status: 'draft',
+				status: initialData?.status || 'draft',
 				notes,
 				items: items.map((item) => ({
-					date: templateType === 'enhanced' ? item.date : undefined,
+					date: item.date,
 					description: item.description,
 					quantity: item.quantity,
-					hours: templateType === 'enhanced' ? item.hours : undefined,
+					hours: item.hours,
 					unitPrice: item.unitPrice,
-					vatPercentage: templateType === 'enhanced' ? item.vatPercentage : undefined,
-					vatAmount: templateType === 'enhanced' ? item.vatAmount : undefined,
+					vatPercentage: item.vatPercentage,
+					vatAmount: item.vatAmount,
 					total: item.total
 				}))
 			};
@@ -235,37 +298,6 @@
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Form Section -->
 		<div class="space-y-6">
-			<!-- Template Selection -->
-			<Card>
-				<CardHeader>
-					<CardTitle>Invoice Template</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div class="flex gap-4">
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="radio"
-								name="template"
-								value="basic"
-								bind:group={templateType}
-								class="h-4 w-4"
-							/>
-							<span>Basic Template</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="radio"
-								name="template"
-								value="enhanced"
-								bind:group={templateType}
-								class="h-4 w-4"
-							/>
-							<span>Enhanced Template (with Hours, VAT breakdown)</span>
-						</label>
-					</div>
-				</CardContent>
-			</Card>
-
 			<!-- Invoice Details -->
 			<Card>
 				<CardHeader>
@@ -283,12 +315,10 @@
 							<Input id="poNumber" bind:value={poNumber} placeholder="Purchase Order Number" />
 						</div>
 
-						{#if templateType === 'enhanced'}
-							<div class="space-y-2">
-								<Label for="department">Department</Label>
-								<Input id="department" bind:value={department} placeholder="e.g., BQT, Sales" />
-							</div>
-						{/if}
+						<div class="space-y-2">
+							<Label for="department">Department</Label>
+							<Input id="department" bind:value={department} placeholder="e.g., BQT, Sales" />
+						</div>
 
 						<div class="space-y-2">
 							<Label for="issueDate">Issue Date</Label>
@@ -326,12 +356,10 @@
 						<Textarea id="clientAddress" bind:value={clientAddress} rows={3} required />
 					</div>
 
-					{#if templateType === 'enhanced'}
-						<div class="space-y-2">
-							<Label for="clientTrn">Client TRN (Tax Registration Number)</Label>
-							<Input id="clientTrn" bind:value={clientTrn} placeholder="100037631700003" />
-						</div>
-					{/if}
+					<div class="space-y-2">
+						<Label for="clientTrn">Client TRN (Tax Registration Number)</Label>
+						<Input id="clientTrn" bind:value={clientTrn} placeholder="100037631700003" />
+					</div>
 				</CardContent>
 			</Card>
 
@@ -346,32 +374,24 @@
 							<thead>
 								<tr class="border-b">
 									<th class="p-2 text-left text-sm font-medium">S.NO</th>
-									{#if templateType === 'enhanced'}
-										<th class="p-2 text-left text-sm font-medium">Date</th>
-									{/if}
+									<th class="p-2 text-left text-sm font-medium">Date</th>
 									<th class="p-2 text-left text-sm font-medium">Particulars</th>
 									<th class="p-2 text-left text-sm font-medium">Quantity</th>
-									{#if templateType === 'enhanced'}
-										<th class="p-2 text-left text-sm font-medium">Hours</th>
-									{/if}
+									<th class="p-2 text-left text-sm font-medium">Hours</th>
 									<th class="p-2 text-left text-sm font-medium">Per Hour/Unit</th>
-									{#if templateType === 'enhanced'}
-										<th class="p-2 text-left text-sm font-medium">VAT %</th>
-										<th class="p-2 text-left text-sm font-medium">VAT Amount</th>
-									{/if}
+									<th class="p-2 text-left text-sm font-medium">VAT %</th>
+									<th class="p-2 text-left text-sm font-medium">VAT Amount</th>
 									<th class="p-2 text-left text-sm font-medium">Amount</th>
 									<th class="p-2 text-left text-sm font-medium"></th>
 								</tr>
 							</thead>
 							<tbody>
-								{#each items as item, index}
+								{#each items as item, index (index)}
 									<tr class="border-b">
 										<td class="p-2 text-center">{index + 1}</td>
-										{#if templateType === 'enhanced'}
-											<td class="p-2">
-												<Input type="date" bind:value={item.date} class="w-32" />
-											</td>
-										{/if}
+										<td class="p-2">
+											<Input type="date" bind:value={item.date} class="w-32" />
+										</td>
 										<td class="p-2">
 											<Input
 												bind:value={item.description}
@@ -389,11 +409,9 @@
 												required
 											/>
 										</td>
-										{#if templateType === 'enhanced'}
-											<td class="p-2">
-												<Input type="number" bind:value={item.hours} min="0" class="w-20" />
-											</td>
-										{/if}
+										<td class="p-2">
+											<Input type="number" bind:value={item.hours} min="0" class="w-20" />
+										</td>
 										<td class="p-2">
 											<Input
 												type="number"
@@ -405,22 +423,20 @@
 												required
 											/>
 										</td>
-										{#if templateType === 'enhanced'}
-											<td class="p-2">
-												<Input
-													type="number"
-													bind:value={item.vatPercentage}
-													min="0"
-													max="100"
-													step="0.01"
-													class="w-20"
-													oninput={() => calculateItemTotal(item)}
-												/>
-											</td>
-											<td class="p-2 text-sm">
-												AED {(item.vatAmount || 0).toFixed(2)}
-											</td>
-										{/if}
+										<td class="p-2">
+											<Input
+												type="number"
+												bind:value={item.vatPercentage}
+												min="0"
+												max="100"
+												step="0.01"
+												class="w-20"
+												oninput={() => calculateItemTotal(item)}
+											/>
+										</td>
+										<td class="p-2 text-sm">
+											AED {(item.vatAmount || 0).toFixed(2)}
+										</td>
 										<td class="p-2 text-sm font-medium">
 											AED {(item.total || 0).toFixed(2)}
 										</td>
@@ -458,12 +474,10 @@
 						<span>Subtotal (Excl VAT):</span>
 						<span class="font-medium">AED {subtotal.toFixed(2)}</span>
 					</div>
-					{#if templateType === 'enhanced'}
-						<div class="flex justify-between text-sm">
-							<span>Total Quantity:</span>
-							<span class="font-medium">{totalQuantity.toFixed(2)}</span>
-						</div>
-					{/if}
+					<div class="flex justify-between text-sm">
+						<span>Total Quantity:</span>
+						<span class="font-medium">{totalQuantity.toFixed(2)}</span>
+					</div>
 					<div class="flex justify-between text-sm">
 						<span>Total VAT:</span>
 						<span class="font-medium">AED {totalVat.toFixed(2)}</span>
@@ -472,12 +486,10 @@
 						<span>Total (Incl VAT):</span>
 						<span>AED {total.toFixed(2)}</span>
 					</div>
-					{#if templateType === 'enhanced'}
-						<div class="mt-2 text-xs text-muted-foreground">
-							<strong>Amount in words:</strong>
-							{numberToWords(total)}
-						</div>
-					{/if}
+					<div class="mt-2 text-xs text-muted-foreground">
+						<strong>Amount in words:</strong>
+						{numberToWords(total)}
+					</div>
 				</CardContent>
 			</Card>
 
@@ -497,7 +509,7 @@
 					Cancel
 				</Button>
 				<Button type="submit" disabled={isSubmitting}>
-					{isSubmitting ? 'Creating...' : 'Create Invoice'}
+					{isSubmitting ? (initialData ? 'Updating...' : 'Creating...') : (initialData ? 'Update Invoice' : 'Create Invoice')}
 				</Button>
 			</div>
 		</div>
@@ -520,6 +532,8 @@
 							companyAddress={companySettings.companyAddress || 'Your Company Address'}
 							companyEmail={companySettings.companyEmail || 'email@company.com'}
 							companyTrn={companySettings.companyTaxId || 'XXXXXXXXXXXXX'}
+							invoice={getPreviewInvoice()}
+							items={getPreviewItems()}
 						/>
 					{:else}
 						<div class="flex h-64 items-center justify-center">
