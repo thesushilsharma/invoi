@@ -17,8 +17,13 @@
 		showLabels?: boolean;
 	}>();
 
-	const maxValue = $derived(Math.max(...data.map(d => d.value), 0));
-	const minValue = $derived(Math.min(...data.map(d => d.value), 0));
+	type GridLine = {
+		y: number;
+		value: number;
+	};
+
+	const maxValue = $derived(Math.max(...data.map((d: MonthlyData) => d.value), 0));
+	const minValue = $derived(Math.min(...data.map((d: MonthlyData) => d.value), 0));
 	const range = $derived(maxValue - minValue || 1);
 
 	function getY(value: number): number {
@@ -29,7 +34,7 @@
 		return 60 + (index * (800 - 120)) / Math.max(data.length - 1, 1);
 	}
 
-	const pathData = $derived(() => {
+	const pathData = $derived.by(() => {
 		if (data.length === 0) return '';
 		
 		let path = `M ${getX(0)} ${getY(data[0].value)}`;
@@ -39,8 +44,8 @@
 		return path;
 	});
 
-	const gridLines = $derived(() => {
-		const lines = [];
+	const gridLines = $derived.by((): GridLine[] => {
+		const lines: GridLine[] = [];
 		const steps = 5;
 		for (let i = 0; i <= steps; i++) {
 			const value = minValue + (range * i) / steps;
@@ -60,7 +65,7 @@
 		<svg width="100%" viewBox="0 0 800 {height}" class="overflow-visible">
 			<!-- Grid lines -->
 			{#if showGrid}
-				{#each gridLines as line}
+				{#each gridLines as line (line.value)}
 					<line
 						x1="60"
 						y1={line.y}
@@ -75,7 +80,7 @@
 
 			<!-- Y-axis labels -->
 			{#if showLabels}
-				{#each gridLines as line}
+				{#each gridLines as line (line.value)}
 					<text
 						x="50"
 						y={line.y + 4}
@@ -99,7 +104,7 @@
 				/>
 
 				<!-- Data points -->
-				{#each data as point, index}
+				{#each data as point, index (`${point.month}-${index}`)}
 					<circle
 						cx={getX(index)}
 						cy={getY(point.value)}
@@ -114,7 +119,7 @@
 
 			<!-- X-axis labels -->
 			{#if showLabels}
-				{#each data as point, index}
+				{#each data as point, index (`${point.month}-${index}`)}
 					<text
 						x={getX(index)}
 						y={height - 20}
