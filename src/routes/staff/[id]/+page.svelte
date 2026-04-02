@@ -206,10 +206,18 @@
 				<p class="text-muted-foreground">{firstName} {lastName}</p>
 			</div>
 		</div>
-		<Button variant="destructive" onclick={handleDelete} disabled={isDeleting}>
-			<Trash2 class="mr-2 h-4 w-4" />
-			{isDeleting ? 'Deleting...' : 'Delete Staff'}
-		</Button>
+		<div class="flex gap-2">
+			<Button variant="outline" onclick={() => goto(`/staff/${staffId}/attendance`)}>
+				Attendance
+			</Button>
+			<Button variant="outline" onclick={() => goto(`/staff/${staffId}/payslips`)}>
+				Payslips
+			</Button>
+			<Button variant="destructive" onclick={handleDelete} disabled={isDeleting}>
+				<Trash2 class="mr-2 h-4 w-4" />
+				{isDeleting ? 'Deleting...' : 'Delete Staff'}
+			</Button>
+		</div>
 	</div>
 
 	{#if isLoading}
