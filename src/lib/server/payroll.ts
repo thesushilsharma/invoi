@@ -29,6 +29,56 @@ export type PayslipPreviewData = {
 	attendance: AttendanceSummary;
 };
 
+export type TimesheetMemberSummary = {
+	staffId: string;
+	employeeId: string;
+	name: string;
+	position: string;
+	department: string | null;
+	status: Staff['status'];
+	workingDays: number;
+	paidDays: number;
+	lopDays: number;
+	totalHours: number;
+	overtimeHours: number;
+	trackedEntries: number;
+	expectedEntries: number;
+	coveragePercent: number;
+	averageHoursPerPaidDay: number;
+};
+
+export type TimesheetRecommendation = {
+	type: 'missing' | 'overtime' | 'undertracked';
+	title: string;
+	message: string;
+	staffId?: string;
+};
+
+export type TeamTimesheetData = {
+	month: string;
+	totals: {
+		staffCount: number;
+		totalHours: number;
+		paidDays: number;
+		lopDays: number;
+		overtimeHours: number;
+		coveragePercent: number;
+	};
+	members: TimesheetMemberSummary[];
+	recommendations: TimesheetRecommendation[];
+	recentEntries: Array<{
+		id: string;
+		staffId: string;
+		name: string;
+		date: string;
+		status: Attendance['status'];
+		hoursWorked: number;
+		checkIn: string | null;
+		checkOut: string | null;
+		notes: string | null;
+	}>;
+};
+
 function getMonthBounds(month: string) {
 	const [year, monthIndex] = month.split('-').map(Number);
 	const start = new Date(year, monthIndex - 1, 1);
@@ -181,4 +231,156 @@ export async function getPayslipPreview(staffId: string, month: string, values?:
 
 export async function listPayslipsForStaff(staffId: string) {
 	return db.select().from(payslips).where(eq(payslips.staffId, staffId)).orderBy(asc(payslips.month));
+}
+
+export async function getTeamTimesheetData(month: string): Promise<TeamTimesheetData> {
+	const staffMembers = await db.select().from(staff).orderBy(asc(staff.firstName), asc(staff.lastName));
+
+	if (staffMembers.length === 0) {
+		return {
+			month,
+			totals: {
+				staffCount: 0,
+				totalHours: 0,
+				paidDays: 0,
+				lopDays: 0,
+				overtimeHours: 0,
+				coveragePercent: 0
+			},
+			members: [],
+			recommendations: [],
+			recentEntries: []
+		};
+	}
+
+	const monthBounds = getMonthBounds(month);
+	const allRecords = await db
+		.select()
+		.from(attendance)
+		.where(and(gte(attendance.date, toDateString(monthBounds.start)), lte(attendance.date, toDateString(monthBounds.end))))
+		.orderBy(asc(attendance.date));
+
+	const recordsByStaff = new Map<string, Attendance[]>();
+	for (const record of allRecords) {
+		const existing = recordsByStaff.get(record.staffId) ?? [];
+		existing.push(record);
+		recordsByStaff.set(record.staffId, existing);
+	}
+
+	const members = staffMembers.map((staffMember) => {
+		const records = recordsByStaff.get(staffMember.id) ?? [];
+		const summary = calculateAttendanceSummary(staffMember, records, month);
+		const expectedEntries = summary.workingDays;
+		const trackedEntries = records.length;
+		const coveragePercent =
+			expectedEntries > 0 ? Number(((trackedEntries / expectedEntries) * 100).toFixed(1)) : 0;
+		const averageHoursPerPaidDay =
+			summary.paidDays > 0 ? Number((summary.totalHours / summary.paidDays).toFixed(2)) : 0;
+
+		return {
+			staffId: staffMember.id,
+			employeeId: staffMember.employeeId,
+			name: `${staffMember.firstName} ${staffMember.lastName}`.trim(),
+			position: staffMember.position,
+			department: staffMember.department,
+			status: staffMember.status,
+			workingDays: summary.workingDays,
+			paidDays: summary.paidDays,
+			lopDays: summary.lopDays,
+			totalHours: summary.totalHours,
+			overtimeHours: summary.overtimeHours,
+			trackedEntries,
+			expectedEntries,
+			coveragePercent,
+			averageHoursPerPaidDay
+		};
+	});
+
+	const totals = members.reduce(
+		(acc, member) => {
+			acc.totalHours += member.totalHours;
+			acc.paidDays += member.paidDays;
+			acc.lopDays += member.lopDays;
+			acc.overtimeHours += member.overtimeHours;
+			acc.expectedEntries += member.expectedEntries;
+			acc.trackedEntries += member.trackedEntries;
+			return acc;
+		},
+		{
+			totalHours: 0,
+			paidDays: 0,
+			lopDays: 0,
+			overtimeHours: 0,
+			expectedEntries: 0,
+			trackedEntries: 0
+		}
+	);
+
+	const recommendations: TimesheetRecommendation[] = [];
+	for (const member of members) {
+		if (member.expectedEntries > 0 && member.trackedEntries === 0) {
+			recommendations.push({
+				type: 'missing',
+				title: `${member.name} has no timesheets logged`,
+				message: `No daily entries were recorded for ${month}. Add attendance records to avoid payroll and billing gaps.`,
+				staffId: member.staffId
+			});
+			continue;
+		}
+
+		if (member.coveragePercent > 0 && member.coveragePercent < 70) {
+			recommendations.push({
+				type: 'undertracked',
+				title: `${member.name} has incomplete timesheets`,
+				message: `Only ${member.coveragePercent}% of expected working days have entries this month.`,
+				staffId: member.staffId
+			});
+		}
+
+		if (member.overtimeHours >= 12) {
+			recommendations.push({
+				type: 'overtime',
+				title: `${member.name} is trending into overtime`,
+				message: `${member.overtimeHours.toFixed(1)} overtime hours are already recorded for ${month}.`,
+				staffId: member.staffId
+			});
+		}
+	}
+
+	const staffMap = new Map(staffMembers.map((staffMember) => [staffMember.id, staffMember]));
+	const recentEntries = [...allRecords]
+		.sort((left, right) => right.date.localeCompare(left.date))
+		.slice(0, 12)
+		.map((record) => {
+			const staffMember = staffMap.get(record.staffId);
+			return {
+				id: record.id,
+				staffId: record.staffId,
+				name: staffMember ? `${staffMember.firstName} ${staffMember.lastName}`.trim() : 'Unknown staff',
+				date: record.date,
+				status: record.status,
+				hoursWorked: Number(record.hoursWorked || 0),
+				checkIn: record.checkIn,
+				checkOut: record.checkOut,
+				notes: record.notes
+			};
+		});
+
+	return {
+		month,
+		totals: {
+			staffCount: staffMembers.length,
+			totalHours: Number(totals.totalHours.toFixed(2)),
+			paidDays: Number(totals.paidDays.toFixed(2)),
+			lopDays: Number(totals.lopDays.toFixed(2)),
+			overtimeHours: Number(totals.overtimeHours.toFixed(2)),
+			coveragePercent:
+				totals.expectedEntries > 0
+					? Number(((totals.trackedEntries / totals.expectedEntries) * 100).toFixed(1))
+					: 0
+		},
+		members,
+		recommendations: recommendations.slice(0, 6),
+		recentEntries
+	};
 }

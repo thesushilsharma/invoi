@@ -4,7 +4,7 @@
   import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarTrigger, SidebarInset } from '$lib/components/ui/sidebar';
   import { Button } from '$lib/components/ui/button';
   import { Toaster } from '$lib/components/ui/toast';
-  import { Home, FileText, DollarSign, Settings, Users, ChartBar, Bell, UserCog } from '@lucide/svelte';
+  import { Home, FileText, DollarSign, Settings, Users, ChartBar, Bell, UserCog, Clock } from '@lucide/svelte';
   
   interface Props {
     children?: import('svelte').Snippet;
@@ -18,6 +18,7 @@
     { title: 'Payments', url: '/payments', icon: DollarSign },
     { title: 'Clients', url: '/clients', icon: Users },
     { title: 'Staff', url: '/staff', icon: UserCog },
+    { title: 'Timesheets', url: '/timesheets', icon: Clock },
     { title: 'Analytics', url: '/analytics', icon: ChartBar },
     { title: 'Reports', url: '/reports', icon: ChartBar },
     { title: 'Notifications', url: '/notifications', icon: Bell },
